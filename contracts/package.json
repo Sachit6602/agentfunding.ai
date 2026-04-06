@@ -1,0 +1,13 @@
+{
+  "name": "tradeflow-contracts",
+  "version": "1.0.0",
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy:testnet": "hardhat run scripts/deploy.js --network kite_testnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5",
+    "hardhat": "^2.22",
+    "dotenv": "^16"
+  }
+}
