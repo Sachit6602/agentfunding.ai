@@ -5,13 +5,20 @@ import config
 
 router = APIRouter()
 
-_supabase = create_client(config.SUPABASE_URL, config.SUPABASE_ANON_KEY)
+_supabase = None
+
+
+def _get_supabase():
+    global _supabase
+    if _supabase is None:
+        _supabase = create_client(config.SUPABASE_URL, config.SUPABASE_ANON_KEY)
+    return _supabase
 
 
 @router.get("/trades")
 def get_trades(limit: int = 20) -> list:
     result = (
-        _supabase.table("trades")
+        _get_supabase().table("trades")
         .select("*")
         .order("timestamp", desc=True)
         .limit(limit)
@@ -23,7 +30,7 @@ def get_trades(limit: int = 20) -> list:
 @router.get("/agent/status")
 def get_agent_status() -> dict:
     result = (
-        _supabase.table("trades")
+        _get_supabase().table("trades")
         .select("*")
         .order("timestamp", desc=True)
         .limit(1)

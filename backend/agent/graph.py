@@ -39,3 +39,7 @@ def build_graph():
     graph.add_edge("log_kite_attestation", END)
 
     return graph.compile()
+
+
+# Module-level instance used by LangGraph CLI / Studio
+graph = build_graph()

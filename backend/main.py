@@ -6,13 +6,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import config
-from agent.graph import build_graph
+from agent.graph import graph as agent_graph
 from api.routes import router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-agent_graph = build_graph()
 agent_task: asyncio.Task | None = None
 
 

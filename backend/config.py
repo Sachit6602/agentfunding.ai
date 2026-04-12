@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Kite
-KITE_RPC_URL: str = os.getenv("KITE_RPC_URL", "https://rpc-testnet.kite.ai")
+KITE_RPC_URL: str = os.getenv("KITE_RPC_URL", "https://rpc-testnet.gokite.ai/")
 KITE_AGENT_PRIVATE_KEY: str = os.environ["KITE_AGENT_PRIVATE_KEY"]
 KITE_ATTESTATION_CONTRACT: str = os.getenv("KITE_ATTESTATION_CONTRACT", "")
 KITE_CHAIN_ID: int = int(os.getenv("KITE_CHAIN_ID", "2368"))
@@ -12,8 +12,9 @@ KITE_CHAIN_ID: int = int(os.getenv("KITE_CHAIN_ID", "2368"))
 # Twelve Data
 TWELVE_DATA_API_KEY: str = os.environ["TWELVE_DATA_API_KEY"]
 
-# Anthropic
-ANTHROPIC_API_KEY: str = os.environ["ANTHROPIC_API_KEY"]
+# OpenRouter
+OPENROUTER_API_KEY: str = os.environ["OPENROUTER_API_KEY"]
+OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "anthropic/claude-haiku-4-5")
 
 # LangSmith
 LANGSMITH_API_KEY: str = os.getenv("LANGSMITH_API_KEY", "")
@@ -22,6 +23,7 @@ LANGSMITH_PROJECT: str = os.getenv("LANGSMITH_PROJECT", "tradeflow")
 os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
 os.environ.setdefault("LANGCHAIN_API_KEY", LANGSMITH_API_KEY)
 os.environ.setdefault("LANGCHAIN_PROJECT", LANGSMITH_PROJECT)
+os.environ.setdefault("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
 
 # Supabase
 SUPABASE_URL: str = os.environ["SUPABASE_URL"]

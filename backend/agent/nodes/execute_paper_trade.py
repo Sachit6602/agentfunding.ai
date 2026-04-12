@@ -8,12 +8,19 @@ from agent.state import AgentState
 
 logger = logging.getLogger(__name__)
 
-_supabase = create_client(config.SUPABASE_URL, config.SUPABASE_ANON_KEY)
+_supabase = None
+
+
+def _get_supabase():
+    global _supabase
+    if _supabase is None:
+        _supabase = create_client(config.SUPABASE_URL, config.SUPABASE_ANON_KEY)
+    return _supabase
 
 
 def _get_portfolio() -> dict:
     result = (
-        _supabase.table("portfolio")
+        _get_supabase().table("portfolio")
         .select("*")
         .order("updated_at", desc=True)
         .limit(1)
@@ -57,7 +64,7 @@ async def execute_paper_trade_node(state: AgentState) -> AgentState:
 
     portfolio = _get_portfolio()
     portfolio = _update_portfolio(portfolio, decision, entry_price)
-    _supabase.table("portfolio").upsert({**portfolio, "updated_at": state["timestamp"]}).execute()
+    _get_supabase().table("portfolio").upsert({**portfolio, "updated_at": state["timestamp"]}).execute()
 
     record = {
         "id": trade_id,
@@ -72,7 +79,7 @@ async def execute_paper_trade_node(state: AgentState) -> AgentState:
         "payment_tx_hash": state.get("payment_tx_hash"),
         "attestation_tx_hash": None,
     }
-    _supabase.table("trades").insert(record).execute()
+    _get_supabase().table("trades").insert(record).execute()
     logger.info(f"Paper trade logged: {trade_id} — {decision['action']} {decision['instrument']}")
 
     state["trade_id"] = trade_id

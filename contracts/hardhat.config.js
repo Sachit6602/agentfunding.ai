@@ -4,6 +4,12 @@ require("dotenv").config({ path: "../.env" });
 /** @type {import('hardhat/config').HardhatUserConfig} */
 module.exports = {
   solidity: "0.8.20",
+  paths: {
+    sources: "./src",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts",
+  },
   networks: {
     kite_testnet: {
       url: process.env.KITE_RPC_URL || "https://rpc-testnet.kite.ai",

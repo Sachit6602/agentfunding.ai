@@ -1,7 +1,7 @@
 import json
 import logging
 
-from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langsmith import traceable
 
 import config
@@ -9,10 +9,15 @@ from agent.state import AgentState
 
 logger = logging.getLogger(__name__)
 
-_llm = ChatAnthropic(
-    model="claude-haiku-4-5",
-    api_key=config.ANTHROPIC_API_KEY,
+_llm = ChatOpenAI(
+    model=config.OPENROUTER_MODEL,
+    api_key=config.OPENROUTER_API_KEY,
+    base_url="https://openrouter.ai/api/v1",
     temperature=0,
+    default_headers={
+        "HTTP-Referer": "https://github.com/Sachit6602/agentfunding.ai",
+        "X-Title": "TradeFlow",
+    },
 )
 
 DECISION_PROMPT = """\
@@ -34,10 +39,19 @@ Output a JSON decision with exactly these four fields:
 Respond with valid JSON only. No markdown, no extra text."""
 
 
+def _parse_json(content: str) -> dict:
+    """Strip markdown code fences if present, then parse JSON."""
+    text = content.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        text = "\n".join(lines[1:-1]).strip()
+    return json.loads(text)
+
+
 @traceable(name="make_trade_decision")
 async def _call_llm(prompt: str) -> dict:
     response = await _llm.ainvoke(prompt)
-    return json.loads(response.content)
+    return _parse_json(response.content)
 
 
 async def make_trade_decision_node(state: AgentState) -> AgentState:

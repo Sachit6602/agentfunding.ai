@@ -1,4 +1,4 @@
-const KITE_EXPLORER = "https://explorer.testnet.kite.ai/tx";
+const KITE_EXPLORER = "https://testnet.kitescan.ai/tx";
 
 export default function AttestationLog({ trades }) {
   return (
