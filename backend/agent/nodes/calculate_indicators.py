@@ -41,11 +41,23 @@ def calculate_indicators_node(state: AgentState) -> AgentState:
     current_price = prices[-1]
     momentum = round((current_price - prices[0]) / prices[0] * 100, 4)
 
+    # Detect recent crossover: compare last two bars
+    prev_ema_9 = float(pd.Series(prices[:-1]).ewm(span=9, adjust=False).mean().iloc[-1])
+    prev_ema_21 = float(pd.Series(prices[:-1]).ewm(span=21, adjust=False).mean().iloc[-1])
+    if prev_ema_9 <= prev_ema_21 and ema_9 > ema_21:
+        crossover = "bullish_cross"
+    elif prev_ema_9 >= prev_ema_21 and ema_9 < ema_21:
+        crossover = "bearish_cross"
+    elif ema_9 > ema_21:
+        crossover = "bullish"
+    else:
+        crossover = "bearish"
+
     state["indicators"] = {
         "rsi": rsi,
         "ema_9": round(ema_9, 4),
         "ema_21": round(ema_21, 4),
-        "ema_crossover": "bullish" if ema_9 > ema_21 else "bearish",
+        "ema_crossover": crossover,
         "momentum_pct": momentum,
         "price": current_price,
     }

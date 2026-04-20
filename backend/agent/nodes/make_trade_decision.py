@@ -21,7 +21,7 @@ _llm = ChatOpenAI(
 )
 
 DECISION_PROMPT = """\
-You are an autonomous trading agent making a position decision.
+You are an autonomous trading agent making a position decision. This is paper trading — be willing to act.
 
 Signal: {direction} (confidence: {confidence})
 Signal reasoning: {reasoning}
@@ -29,6 +29,12 @@ Current price: {price}
 Instrument: {instrument}
 Portfolio cash: ${cash}
 Open positions: {positions}
+
+Rules:
+- If direction=long and confidence >= 0.55: action=buy, size_usd = min(500, cash * 0.10)
+- If direction=short and confidence >= 0.55: action=sell, size_usd = min(500, cash * 0.10)
+- If direction=neutral OR confidence < 0.55: action=hold, size_usd=0
+- Never exceed 10% of portfolio cash per trade
 
 Output a JSON decision with exactly these four fields:
 - action: "buy", "sell", or "hold"

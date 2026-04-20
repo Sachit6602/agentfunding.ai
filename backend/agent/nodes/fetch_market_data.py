@@ -6,6 +6,7 @@ from web3 import Web3
 from eth_account import Account
 
 import config
+import price_store
 from agent.state import AgentState
 
 logger = logging.getLogger(__name__)
@@ -74,4 +75,5 @@ async def fetch_market_data_node(state: AgentState) -> AgentState:
         "timestamp": timestamp,
     }
     state["timestamp"] = timestamp
+    price_store.update(data["price"], timestamp)
     return state

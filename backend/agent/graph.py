@@ -33,7 +33,7 @@ def build_graph():
     graph.add_conditional_edges(
         "risk_check",
         _route_risk,
-        {"pass": "execute_paper_trade", "veto": "log_kite_attestation"},
+        {"pass": "execute_paper_trade", "veto": "log_kite_attestation", "hold": END},
     )
     graph.add_edge("execute_paper_trade", "log_kite_attestation")
     graph.add_edge("log_kite_attestation", END)

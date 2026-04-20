@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from web3 import Web3
 from eth_account import Account
+from supabase import create_client
 
 import config
 from agent.state import AgentState
@@ -25,6 +26,14 @@ ATTESTATION_ABI = [
 
 _w3 = Web3(Web3.HTTPProvider(config.KITE_RPC_URL))
 _account = Account.from_key(config.KITE_AGENT_PRIVATE_KEY)
+_supabase = None
+
+
+def _get_supabase():
+    global _supabase
+    if _supabase is None:
+        _supabase = create_client(config.SUPABASE_URL, config.SUPABASE_ANON_KEY)
+    return _supabase
 
 
 async def log_kite_attestation_node(state: AgentState) -> AgentState:
@@ -64,8 +73,16 @@ async def log_kite_attestation_node(state: AgentState) -> AgentState:
         }
     )
     signed = _account.sign_transaction(tx)
-    tx_hash = _w3.eth.send_raw_transaction(signed.raw_transaction).hex()
+    tx_hash = Web3.to_hex(_w3.eth.send_raw_transaction(signed.raw_transaction))
 
     logger.info(f"Kite attestation tx: {tx_hash}")
     state["attestation_tx_hash"] = tx_hash
+
+    # Persist the hash back to the Supabase trade record
+    trade_id = state.get("trade_id")
+    if trade_id:
+        _get_supabase().table("trades").update(
+            {"attestation_tx_hash": tx_hash}
+        ).eq("id", trade_id).execute()
+
     return state

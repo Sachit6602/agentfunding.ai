@@ -28,8 +28,8 @@ def risk_check_node(state: AgentState) -> AgentState:
     size_usd = float(decision.get("size_usd", 0))
 
     if action == "hold":
-        state["risk_result"] = "pass"
-        state["risk_reason"] = "Hold — no position change required."
+        state["risk_result"] = "hold"
+        state["risk_reason"] = "Hold — no position change."
         return state
 
     # Rule 1: position size cap

@@ -18,3 +18,20 @@ export async function fetchAgentStatus() {
   if (!resp.ok) throw new Error("Failed to fetch status");
   return resp.json();
 }
+
+export async function fetchChart() {
+  const resp = await fetch(`${API_URL}/chart`);
+  if (!resp.ok) return [];
+  return resp.json();
+}
+
+export async function closePosition(instrument) {
+  const resp = await fetch(`${API_URL}/positions/close/${instrument}`, {
+    method: "POST",
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+    throw new Error(err.detail || "Failed to close position");
+  }
+  return resp.json();
+}

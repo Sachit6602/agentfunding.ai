@@ -21,15 +21,21 @@ _llm = ChatOpenAI(
 )
 
 SIGNAL_PROMPT = """\
-You are a quantitative trading signal interpreter.
+You are a quantitative trading signal interpreter. Be decisive — only output "neutral" if the indicators are genuinely mixed.
 
 Instrument: {instrument}
 Current price: {price}
-RSI (14): {rsi}
+RSI (14): {rsi}  [oversold < 35, overbought > 65]
 EMA 9: {ema_9}
 EMA 21: {ema_21}
-EMA crossover: {ema_crossover}
-Momentum (%): {momentum_pct}
+EMA crossover: {ema_crossover}  [bullish_cross = strong long signal, bearish_cross = strong short signal]
+Momentum (%): {momentum_pct}  [> +0.3% = bullish, < -0.3% = bearish]
+
+Rules:
+- If RSI < 35 and momentum > 0: direction=long, confidence >= 0.65
+- If RSI > 65 and momentum < 0: direction=short, confidence >= 0.65
+- If EMA crossover is bullish_cross or bearish_cross: confidence >= 0.70
+- If signals conflict or are flat: direction=neutral, confidence <= 0.50
 
 Output a JSON signal with exactly these three fields:
 - direction: "long", "short", or "neutral"

@@ -34,25 +34,51 @@ def _get_portfolio() -> dict:
 def _update_portfolio(portfolio: dict, decision: dict, entry_price: float) -> dict:
     action = decision.get("action")
     size_usd = float(decision.get("size_usd", 0))
+    instrument = decision["instrument"]
+    positions = portfolio.get("positions", [])
+    cash = float(portfolio.get("cash", 10000.0))
+    pnl = float(portfolio.get("pnl", 0.0))
+    daily_loss = float(portfolio.get("daily_loss", 0.0))
 
     if action == "buy":
-        portfolio["cash"] = float(portfolio.get("cash", 10000.0)) - size_usd
-        portfolio.setdefault("positions", []).append(
-            {"instrument": decision["instrument"], "size_usd": size_usd, "entry_price": entry_price}
-        )
-    elif action == "sell":
-        # Close first matching long position and realise P&L
-        positions = portfolio.get("positions", [])
+        # Close matching short first
         for i, pos in enumerate(positions):
-            if pos["instrument"] == decision["instrument"]:
-                realised = size_usd - pos["size_usd"]
-                portfolio["pnl"] = float(portfolio.get("pnl", 0.0)) + realised
-                portfolio["daily_loss"] = float(portfolio.get("daily_loss", 0.0)) + min(0, realised)
-                portfolio["cash"] = float(portfolio.get("cash", 10000.0)) + size_usd
+            if pos["instrument"] == instrument and pos.get("side") == "short":
+                # P&L on short: entry - current (profit when price falls)
+                price_diff = pos["entry_price"] - entry_price
+                units = pos["size_usd"] / pos["entry_price"]
+                realised = units * price_diff
+                pnl += realised
+                daily_loss += min(0, realised)
+                cash += pos["size_usd"] + realised  # return collateral ± profit
                 positions.pop(i)
                 break
-        portfolio["positions"] = positions
+        else:
+            # No short to close — open a long
+            cash -= size_usd
+            positions.append({"instrument": instrument, "side": "long", "size_usd": size_usd, "entry_price": entry_price})
 
+    elif action == "sell":
+        # Close matching long first
+        for i, pos in enumerate(positions):
+            if pos["instrument"] == instrument and pos.get("side", "long") == "long":
+                price_diff = entry_price - pos["entry_price"]
+                units = pos["size_usd"] / pos["entry_price"]
+                realised = units * price_diff
+                pnl += realised
+                daily_loss += min(0, realised)
+                cash += pos["size_usd"] + realised
+                positions.pop(i)
+                break
+        else:
+            # No long to close — open a short
+            cash -= size_usd  # lock collateral
+            positions.append({"instrument": instrument, "side": "short", "size_usd": size_usd, "entry_price": entry_price})
+
+    portfolio["cash"] = round(cash, 4)
+    portfolio["pnl"] = round(pnl, 4)
+    portfolio["daily_loss"] = round(daily_loss, 4)
+    portfolio["positions"] = positions
     return portfolio
 
 
