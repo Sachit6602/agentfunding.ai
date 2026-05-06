@@ -73,7 +73,7 @@ async def log_kite_attestation_node(state: AgentState) -> AgentState:
         }
     )
     signed = _account.sign_transaction(tx)
-    tx_hash = Web3.to_hex(_w3.eth.send_raw_transaction(signed.raw_transaction))
+    tx_hash = _w3.eth.send_raw_transaction(signed.raw_transaction).hex()
 
     logger.info(f"Kite attestation tx: {tx_hash}")
     state["attestation_tx_hash"] = tx_hash
