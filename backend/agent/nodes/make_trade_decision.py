@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 
@@ -14,6 +15,7 @@ _llm = ChatOpenAI(
     api_key=config.OPENROUTER_API_KEY,
     base_url="https://openrouter.ai/api/v1",
     temperature=0,
+    timeout=30,
     default_headers={
         "HTTP-Referer": "https://github.com/Sachit6602/agentfunding.ai",
         "X-Title": "TradeFlow",
@@ -46,7 +48,6 @@ Respond with valid JSON only. No markdown, no extra text."""
 
 
 def _parse_json(content: str) -> dict:
-    """Strip markdown code fences if present, then parse JSON."""
     text = content.strip()
     if text.startswith("```"):
         lines = text.splitlines()
@@ -54,10 +55,23 @@ def _parse_json(content: str) -> dict:
     return json.loads(text)
 
 
+_HOLD_DECISION = {"action": "hold", "instrument": "XAUUSD", "size_usd": 0, "reasoning": "LLM parse error — defaulting to hold"}
+
+
 @traceable(name="make_trade_decision")
 async def _call_llm(prompt: str) -> dict:
-    response = await _llm.ainvoke(prompt)
-    return _parse_json(response.content)
+    try:
+        response = await asyncio.wait_for(_llm.ainvoke(prompt), timeout=30)
+        return _parse_json(response.content)
+    except asyncio.TimeoutError:
+        logger.error("make_trade_decision LLM call timed out after 30s")
+        return _HOLD_DECISION
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.error(f"make_trade_decision JSON parse error: {e}")
+        return _HOLD_DECISION
+    except Exception as e:
+        logger.error(f"make_trade_decision LLM error: {e}")
+        return _HOLD_DECISION
 
 
 async def make_trade_decision_node(state: AgentState) -> AgentState:

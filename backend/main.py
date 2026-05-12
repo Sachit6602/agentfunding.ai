@@ -17,6 +17,7 @@ agent_task: asyncio.Task | None = None
 
 async def agent_loop() -> None:
     cycle = 0
+    consecutive_errors = 0
     while True:
         try:
             logger.info(f"Starting agent cycle {cycle}")
@@ -41,8 +42,23 @@ async def agent_loop() -> None:
                 f"Cycle {cycle} complete. Attestation: {result.get('attestation_tx_hash')}"
             )
             cycle += 1
+            consecutive_errors = 0
+        except asyncio.CancelledError:
+            logger.info("Agent loop cancelled — shutting down")
+            return
+        except (ConnectionError, TimeoutError, OSError) as e:
+            consecutive_errors += 1
+            backoff = min(60 * consecutive_errors, 300)
+            logger.warning(f"Cycle {cycle} network error (attempt {consecutive_errors}): {e} — retrying in {backoff}s")
+            await asyncio.sleep(backoff)
+            continue
         except Exception as e:
+            consecutive_errors += 1
             logger.error(f"Cycle {cycle} error: {e}", exc_info=True)
+            if consecutive_errors >= 10:
+                logger.critical("10 consecutive failures — pausing agent for 5 minutes")
+                await asyncio.sleep(300)
+                consecutive_errors = 0
         await asyncio.sleep(config.AGENT_CYCLE_INTERVAL_SECONDS)
 
 

@@ -7,6 +7,7 @@ from eth_account import Account
 
 import config
 import price_store
+import tx_lock as _tx_module
 from agent.state import AgentState
 
 logger = logging.getLogger(__name__)
@@ -20,19 +21,18 @@ async def _pay_x402(payment_details: dict) -> str:
     account = Account.from_key(config.KITE_AGENT_PRIVATE_KEY)
 
     # TODO: replace with ERC-20 USDT transfer when token contract address is known.
-    # For now sends a minimal native token transfer to signal intent — both sides
-    # are controlled by the team so the server can accept this for the demo.
-    tx = {
-        "to": Web3.to_checksum_address(payment_details["wallet"]),
-        "value": w3.to_wei(0.0001, "ether"),  # dust native token as payment signal
-        "gas": 21_000,
-        "gasPrice": w3.eth.gas_price,
-        "nonce": w3.eth.get_transaction_count(account.address),
-        "chainId": config.KITE_CHAIN_ID,
-    }
-    signed = account.sign_transaction(tx)
-    tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
-    receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=30)
+    async with _tx_module.tx_lock:
+        tx = {
+            "to": Web3.to_checksum_address(payment_details["wallet"]),
+            "value": w3.to_wei(0.0001, "ether"),
+            "gas": 21_000,
+            "gasPrice": w3.eth.gas_price,
+            "nonce": w3.eth.get_transaction_count(account.address),
+            "chainId": config.KITE_CHAIN_ID,
+        }
+        signed = account.sign_transaction(tx)
+        tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
     if receipt["status"] != 1:
         raise RuntimeError(f"Payment tx reverted: {tx_hash.hex()}")
     return tx_hash.hex()

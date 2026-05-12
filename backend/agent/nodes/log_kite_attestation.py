@@ -7,6 +7,7 @@ from eth_account import Account
 from supabase import create_client
 
 import config
+import tx_lock as _tx_module
 from agent.state import AgentState
 
 logger = logging.getLogger(__name__)
@@ -63,17 +64,18 @@ async def log_kite_attestation_node(state: AgentState) -> AgentState:
         separators=(",", ":"),
     )
 
-    tx = contract.functions.attest(trade_id_bytes, payload).build_transaction(
-        {
-            "from": _account.address,
-            "gas": 300_000,
-            "gasPrice": _w3.eth.gas_price,
-            "nonce": _w3.eth.get_transaction_count(_account.address),
-            "chainId": config.KITE_CHAIN_ID,
-        }
-    )
-    signed = _account.sign_transaction(tx)
-    tx_hash = _w3.eth.send_raw_transaction(signed.raw_transaction).hex()
+    async with _tx_module.tx_lock:
+        tx = contract.functions.attest(trade_id_bytes, payload).build_transaction(
+            {
+                "from": _account.address,
+                "gas": 300_000,
+                "gasPrice": _w3.eth.gas_price,
+                "nonce": _w3.eth.get_transaction_count(_account.address),
+                "chainId": config.KITE_CHAIN_ID,
+            }
+        )
+        signed = _account.sign_transaction(tx)
+        tx_hash = _w3.eth.send_raw_transaction(signed.raw_transaction).hex()
 
     logger.info(f"Kite attestation tx: {tx_hash}")
     state["attestation_tx_hash"] = tx_hash

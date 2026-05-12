@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 
@@ -14,6 +15,7 @@ _llm = ChatOpenAI(
     api_key=config.OPENROUTER_API_KEY,
     base_url="https://openrouter.ai/api/v1",
     temperature=0,
+    timeout=30,
     default_headers={
         "HTTP-Referer": "https://github.com/Sachit6602/agentfunding.ai",
         "X-Title": "TradeFlow",
@@ -46,19 +48,30 @@ Respond with valid JSON only. No markdown, no extra text."""
 
 
 def _parse_json(content: str) -> dict:
-    """Strip markdown code fences if present, then parse JSON."""
     text = content.strip()
     if text.startswith("```"):
         lines = text.splitlines()
-        # drop first line (```json or ```) and last line (```)
         text = "\n".join(lines[1:-1]).strip()
     return json.loads(text)
 
 
+_NEUTRAL_SIGNAL = {"direction": "neutral", "confidence": 0.0, "reasoning": "LLM parse error — defaulting to neutral"}
+
+
 @traceable(name="interpret_signal")
 async def _call_llm(prompt: str) -> dict:
-    response = await _llm.ainvoke(prompt)
-    return _parse_json(response.content)
+    try:
+        response = await asyncio.wait_for(_llm.ainvoke(prompt), timeout=30)
+        return _parse_json(response.content)
+    except asyncio.TimeoutError:
+        logger.error("interpret_signal LLM call timed out after 30s")
+        return _NEUTRAL_SIGNAL
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.error(f"interpret_signal JSON parse error: {e}")
+        return _NEUTRAL_SIGNAL
+    except Exception as e:
+        logger.error(f"interpret_signal LLM error: {e}")
+        return _NEUTRAL_SIGNAL
 
 
 async def interpret_signal_node(state: AgentState) -> AgentState:

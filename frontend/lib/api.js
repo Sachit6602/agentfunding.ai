@@ -1,37 +1,49 @@
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+async function apiFetch(path, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const resp = await fetch(`${API_URL}${path}`, { ...options, signal: controller.signal });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({ detail: resp.statusText }));
+      const err = new Error(body.detail || `HTTP ${resp.status}`);
+      err.status = resp.status;
+      throw err;
+    }
+    return resp.json();
+  } catch (err) {
+    if (err.name === "AbortError") {
+      const timeout = new Error("Request timed out");
+      timeout.status = 408;
+      throw timeout;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function fetchTrades(limit = 20) {
-  const resp = await fetch(`${API_URL}/trades?limit=${limit}`);
-  if (!resp.ok) throw new Error("Failed to fetch trades");
-  return resp.json();
+  return apiFetch(`/trades?limit=${limit}`);
 }
 
 export async function fetchPortfolio() {
-  const resp = await fetch(`${API_URL}/portfolio`);
-  if (!resp.ok) throw new Error("Failed to fetch portfolio");
-  return resp.json();
+  return apiFetch("/portfolio");
 }
 
 export async function fetchAgentStatus() {
-  const resp = await fetch(`${API_URL}/agent/status`);
-  if (!resp.ok) throw new Error("Failed to fetch status");
-  return resp.json();
+  return apiFetch("/agent/status");
 }
 
 export async function fetchChart() {
-  const resp = await fetch(`${API_URL}/chart`);
-  if (!resp.ok) return [];
-  return resp.json();
+  try {
+    return await apiFetch("/chart");
+  } catch {
+    return [];
+  }
 }
 
 export async function closePosition(instrument) {
-  const resp = await fetch(`${API_URL}/positions/close/${instrument}`, {
-    method: "POST",
-  });
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-    throw new Error(err.detail || "Failed to close position");
-  }
-  return resp.json();
+  return apiFetch(`/positions/close/${instrument}`, { method: "POST" });
 }

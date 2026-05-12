@@ -37,3 +37,9 @@ AGENT_CYCLE_INTERVAL_SECONDS: int = int(os.getenv("AGENT_CYCLE_INTERVAL_SECONDS"
 MAX_POSITION_SIZE_USD: float = float(os.getenv("MAX_POSITION_SIZE_USD", "1000"))
 MAX_DRAWDOWN_PCT: float = float(os.getenv("MAX_DRAWDOWN_PCT", "0.05"))
 DAILY_LOSS_LIMIT_USD: float = float(os.getenv("DAILY_LOSS_LIMIT_USD", "500"))
+
+# Validate critical values at import time so misconfiguration fails loudly
+assert AGENT_CYCLE_INTERVAL_SECONDS >= 5, "AGENT_CYCLE_INTERVAL_SECONDS must be >= 5"
+assert MAX_POSITION_SIZE_USD > 0, "MAX_POSITION_SIZE_USD must be positive"
+assert 0 < MAX_DRAWDOWN_PCT < 1, "MAX_DRAWDOWN_PCT must be between 0 and 1"
+assert DAILY_LOSS_LIMIT_USD > 0, "DAILY_LOSS_LIMIT_USD must be positive"

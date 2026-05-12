@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, HTTPException
 from datetime import datetime, timezone
 
@@ -8,6 +9,7 @@ import price_store
 router = APIRouter()
 
 _supabase = None
+_close_lock = asyncio.Lock()
 
 
 def _get_supabase():
@@ -67,42 +69,46 @@ def get_chart() -> list:
 
 
 @router.post("/positions/close/{instrument}")
-def close_position(instrument: str) -> dict:
+async def close_position(instrument: str) -> dict:
     """Manually close an open position at current market price."""
     current_price = price_store.get_last_price()
     if current_price is None:
         raise HTTPException(status_code=503, detail="No price data available yet")
 
-    portfolio = _get_portfolio()
-    positions = portfolio.get("positions", [])
-    closed = None
+    async with _close_lock:
+        portfolio = _get_portfolio()
+        version = portfolio.get("version", 0)
+        positions = portfolio.get("positions", [])
+        closed = None
 
-    for i, pos in enumerate(positions):
-        if pos["instrument"].upper() == instrument.upper():
-            entry_price = float(pos["entry_price"])
-            size_usd = float(pos["size_usd"])
-            side = pos.get("side", "long")
-            units = size_usd / entry_price
+        for i, pos in enumerate(positions):
+            if pos["instrument"].upper() == instrument.upper():
+                entry_price = float(pos["entry_price"])
+                size_usd = float(pos["size_usd"])
+                side = pos.get("side", "long")
+                units = size_usd / entry_price
 
-            if side == "long":
-                realised = units * (current_price - entry_price)
-            else:
-                realised = units * (entry_price - current_price)
+                realised = (
+                    units * (current_price - entry_price)
+                    if side == "long"
+                    else units * (entry_price - current_price)
+                )
 
-            portfolio["pnl"] = round(float(portfolio.get("pnl", 0.0)) + realised, 4)
-            portfolio["daily_loss"] = round(float(portfolio.get("daily_loss", 0.0)) + min(0, realised), 4)
-            portfolio["cash"] = round(float(portfolio.get("cash", 10000.0)) + size_usd + realised, 4)
-            closed = {**pos, "exit_price": current_price, "realised_pnl": round(realised, 4)}
-            positions.pop(i)
-            break
+                portfolio["pnl"] = round(float(portfolio.get("pnl", 0.0)) + realised, 4)
+                portfolio["daily_loss"] = round(float(portfolio.get("daily_loss", 0.0)) + min(0, realised), 4)
+                portfolio["cash"] = round(float(portfolio.get("cash", 10000.0)) + size_usd + realised, 4)
+                closed = {**pos, "exit_price": current_price, "realised_pnl": round(realised, 4)}
+                positions.pop(i)
+                break
 
-    if closed is None:
-        raise HTTPException(status_code=404, detail=f"No open position for {instrument}")
+        if closed is None:
+            raise HTTPException(status_code=404, detail=f"No open position for {instrument}")
 
-    portfolio["positions"] = positions
-    _get_supabase().table("portfolio").upsert({
-        **portfolio,
-        "updated_at": datetime.now(timezone.utc).isoformat()
-    }).execute()
+        portfolio["positions"] = positions
+        portfolio["version"] = version + 1
+        _get_supabase().table("portfolio").upsert({
+            **portfolio,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }).execute()
 
     return {"closed": closed, "portfolio": portfolio}

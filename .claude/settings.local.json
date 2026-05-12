@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(Get-ChildItem -Path \"d:\\\\Documents\\\\agentfunding.exe\" -Force)",
+      "Bash(Select-Object Name, FullName)",
+      "Bash(find d:\\\\\\\\Documents\\\\\\\\agentfunding.exe\\\\\\\\backend -maxdepth 2 -name \"*.py\" -not -path \"*/.venv/*\")",
+      "Bash(find d:\\\\\\\\Documents\\\\\\\\agentfunding.exe\\\\\\\\x402-data-server -maxdepth 1 -name \"*.py\")",
+      "Bash(find d:\\\\\\\\Documents\\\\\\\\agentfunding.exe\\\\\\\\frontend -maxdepth 2 -name \"*.{jsx,tsx,js,json}\" -not -path \"*/node_modules/*\")"
     ]
   }
 }
