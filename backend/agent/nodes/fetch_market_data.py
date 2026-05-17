@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime, timezone
 
@@ -15,27 +16,31 @@ logger = logging.getLogger(__name__)
 PAYMENT_AMOUNT_USDT = "0.01"
 
 
-async def _pay_x402(payment_details: dict) -> str:
-    """Submit payment on Kite testnet and return the tx hash."""
+def _pay_x402_sync(payment_details: dict) -> str:
+    """Submit payment on Kite testnet and return the tx hash (blocking)."""
     w3 = Web3(Web3.HTTPProvider(config.KITE_RPC_URL))
     account = Account.from_key(config.KITE_AGENT_PRIVATE_KEY)
 
     # TODO: replace with ERC-20 USDT transfer when token contract address is known.
-    async with _tx_module.tx_lock:
-        tx = {
-            "to": Web3.to_checksum_address(payment_details["wallet"]),
-            "value": w3.to_wei(0.0001, "ether"),
-            "gas": 21_000,
-            "gasPrice": w3.eth.gas_price,
-            "nonce": w3.eth.get_transaction_count(account.address),
-            "chainId": config.KITE_CHAIN_ID,
-        }
-        signed = account.sign_transaction(tx)
-        tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
-        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
+    tx = {
+        "to": Web3.to_checksum_address(payment_details["wallet"]),
+        "value": w3.to_wei(0.0001, "ether"),
+        "gas": 21_000,
+        "gasPrice": w3.eth.gas_price,
+        "nonce": w3.eth.get_transaction_count(account.address),
+        "chainId": config.KITE_CHAIN_ID,
+    }
+    signed = account.sign_transaction(tx)
+    tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
     if receipt["status"] != 1:
         raise RuntimeError(f"Payment tx reverted: {tx_hash.hex()}")
     return tx_hash.hex()
+
+
+async def _pay_x402(payment_details: dict) -> str:
+    async with _tx_module.tx_lock:
+        return await asyncio.to_thread(_pay_x402_sync, payment_details)
 
 
 async def fetch_market_data_node(state: AgentState) -> AgentState:

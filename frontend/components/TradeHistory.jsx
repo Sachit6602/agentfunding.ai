@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 
 const KITE_EXPLORER = "https://testnet.kitescan.ai/tx";
 
@@ -173,9 +173,8 @@ export default function TradeHistory({ trades }) {
             {filtered.map((t) => {
               const isExpanded = expandedId === t.id;
               return (
-                <>
+                <React.Fragment key={t.id}>
                   <tr
-                    key={t.id}
                     onClick={() => toggle(t.id)}
                     className={`border-b border-white/[0.03] transition-colors cursor-pointer select-none ${
                       isExpanded
@@ -245,7 +244,7 @@ export default function TradeHistory({ trades }) {
                   {isExpanded && (
                     <ExpandedRow key={`${t.id}-exp`} trade={t} colSpan={9} />
                   )}
-                </>
+                </React.Fragment>
               );
             })}
 

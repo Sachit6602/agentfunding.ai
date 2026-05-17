@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 
@@ -88,9 +89,11 @@ async def execute_paper_trade_node(state: AgentState) -> AgentState:
     entry_price = float(md["price"])
     trade_id = str(uuid.uuid4())
 
-    portfolio = _get_portfolio()
+    portfolio = await asyncio.to_thread(_get_portfolio)
     portfolio = _update_portfolio(portfolio, decision, entry_price)
-    _get_supabase().table("portfolio").upsert({**portfolio, "updated_at": state["timestamp"]}).execute()
+    await asyncio.to_thread(
+        lambda: _get_supabase().table("portfolio").upsert({**portfolio, "updated_at": state["timestamp"]}).execute()
+    )
 
     record = {
         "id": trade_id,
@@ -100,12 +103,14 @@ async def execute_paper_trade_node(state: AgentState) -> AgentState:
         "entry_price": entry_price,
         "reasoning": decision["reasoning"],
         "signal": state["signal"],
-        "cycle": state["cycle_count"],
+        "cycle": state.get("cycle_count", 0),
         "timestamp": state["timestamp"],
         "payment_tx_hash": state.get("payment_tx_hash"),
         "attestation_tx_hash": None,
     }
-    _get_supabase().table("trades").insert(record).execute()
+    await asyncio.to_thread(
+        lambda: _get_supabase().table("trades").insert(record).execute()
+    )
     logger.info(f"Paper trade logged: {trade_id} — {decision['action']} {decision['instrument']}")
 
     state["trade_id"] = trade_id

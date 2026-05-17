@@ -6,7 +6,19 @@
       "Bash(Select-Object Name, FullName)",
       "Bash(find d:\\\\\\\\Documents\\\\\\\\agentfunding.exe\\\\\\\\backend -maxdepth 2 -name \"*.py\" -not -path \"*/.venv/*\")",
       "Bash(find d:\\\\\\\\Documents\\\\\\\\agentfunding.exe\\\\\\\\x402-data-server -maxdepth 1 -name \"*.py\")",
-      "Bash(find d:\\\\\\\\Documents\\\\\\\\agentfunding.exe\\\\\\\\frontend -maxdepth 2 -name \"*.{jsx,tsx,js,json}\" -not -path \"*/node_modules/*\")"
+      "Bash(find d:\\\\\\\\Documents\\\\\\\\agentfunding.exe\\\\\\\\frontend -maxdepth 2 -name \"*.{jsx,tsx,js,json}\" -not -path \"*/node_modules/*\")",
+      "Bash(dir /b \"d:\\\\Documents\\\\agentfunding.exe\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/health)",
+      "Bash(curl -s http://localhost:8000/portfolio)",
+      "Bash(curl -sv http://localhost:8000/portfolio)",
+      "Bash(.venv/Scripts/python.exe -c ' *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://ylrxllpkbvdgpitzddho.supabase.co/rest/v1/\")",
+      "Bash(npm install *)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:8001/health\" -UseBasicParsing -TimeoutSec 5 2>&1)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:8000/trades?limit=1\" -UseBasicParsing -TimeoutSec 5)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:8001/health\" -UseBasicParsing -TimeoutSec 5)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8000/trades?limit=1\" -UseBasicParsing -TimeoutSec 5; Write-Host \"Status: $\\($r.StatusCode\\)\"; Write-Host \"Body: $\\($r.Content\\)\" } catch { Write-Host \"Error: $_\" })",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8001/health\" -UseBasicParsing -TimeoutSec 5; Write-Host \"Status: $\\($r.StatusCode\\)\"; Write-Host \"Body: $\\($r.Content\\)\" } catch { Write-Host \"Error: $_\" })"
     ]
   }
 }

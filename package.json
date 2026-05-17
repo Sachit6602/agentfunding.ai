@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "dev": "concurrently --names \"backend,data,frontend\" --prefix-colors \"blue,yellow,green\" \"cd backend && .venv\\\\Scripts\\\\uvicorn.exe main:app --reload --port 8000\" \"cd x402-data-server && ..\\\\backend\\\\.venv\\\\Scripts\\\\uvicorn.exe main:app --reload --port 8001\" \"cd frontend && npm run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
