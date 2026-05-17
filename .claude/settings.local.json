@@ -18,7 +18,10 @@
       "PowerShell(Invoke-WebRequest -Uri \"http://localhost:8000/trades?limit=1\" -UseBasicParsing -TimeoutSec 5)",
       "PowerShell(Invoke-WebRequest -Uri \"http://localhost:8001/health\" -UseBasicParsing -TimeoutSec 5)",
       "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8000/trades?limit=1\" -UseBasicParsing -TimeoutSec 5; Write-Host \"Status: $\\($r.StatusCode\\)\"; Write-Host \"Body: $\\($r.Content\\)\" } catch { Write-Host \"Error: $_\" })",
-      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8001/health\" -UseBasicParsing -TimeoutSec 5; Write-Host \"Status: $\\($r.StatusCode\\)\"; Write-Host \"Body: $\\($r.Content\\)\" } catch { Write-Host \"Error: $_\" })"
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8001/health\" -UseBasicParsing -TimeoutSec 5; Write-Host \"Status: $\\($r.StatusCode\\)\"; Write-Host \"Body: $\\($r.Content\\)\" } catch { Write-Host \"Error: $_\" })",
+      "Bash(python -c \"import pptx; print\\('pptx ok'\\)\")",
+      "Bash(pip install *)",
+      "Bash(python generate_ppt.py)"
     ]
   }
 }

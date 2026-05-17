@@ -33,6 +33,12 @@ SUPABASE_ANON_KEY: str = os.environ["SUPABASE_ANON_KEY"]
 # x402 Data Server
 X402_DATA_SERVER_URL: str = os.getenv("X402_DATA_SERVER_URL", "http://localhost:8001")
 
+# Payment token — set to an ERC-20 contract address to pay with a token (e.g. USDT).
+# Leave blank to fall back to native ETH micro-payments.
+KITE_PAYMENT_TOKEN_CONTRACT: str = os.getenv("KITE_PAYMENT_TOKEN_CONTRACT", "")
+# Token decimals (6 for USDT/USDC, 18 for most others)
+KITE_PAYMENT_TOKEN_DECIMALS: int = int(os.getenv("KITE_PAYMENT_TOKEN_DECIMALS", "6"))
+
 # Agent
 AGENT_CYCLE_INTERVAL_SECONDS: int = int(os.getenv("AGENT_CYCLE_INTERVAL_SECONDS", "30"))
 MAX_POSITION_SIZE_USD: float = float(os.getenv("MAX_POSITION_SIZE_USD", "1000"))

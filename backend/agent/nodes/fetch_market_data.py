@@ -13,23 +13,52 @@ from agent.state import AgentState
 
 logger = logging.getLogger(__name__)
 
-PAYMENT_AMOUNT_USDT = "0.01"
+# 0.01 token units (e.g. 0.01 USDT). Stored as a human-readable float; converted
+# to the token's integer denomination inside _pay_x402_sync.
+PAYMENT_AMOUNT = 0.01
+
+_ERC20_TRANSFER_ABI = [
+    {
+        "inputs": [
+            {"name": "to", "type": "address"},
+            {"name": "amount", "type": "uint256"},
+        ],
+        "name": "transfer",
+        "outputs": [{"name": "", "type": "bool"}],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    }
+]
 
 
 def _pay_x402_sync(payment_details: dict) -> str:
-    """Submit payment on Kite testnet and return the tx hash (blocking)."""
+    """Submit payment on Kite testnet and return the tx hash (blocking).
+
+    Uses ERC-20 transfer when KITE_PAYMENT_TOKEN_CONTRACT is configured,
+    otherwise falls back to a native-ETH micro-payment.
+    """
     w3 = Web3(Web3.HTTPProvider(config.KITE_RPC_URL))
     account = Account.from_key(config.KITE_AGENT_PRIVATE_KEY)
+    recipient = Web3.to_checksum_address(payment_details["wallet"])
+    nonce = w3.eth.get_transaction_count(account.address)
+    base = {"gas": 21_000, "gasPrice": w3.eth.gas_price, "nonce": nonce, "chainId": config.KITE_CHAIN_ID}
 
-    # TODO: replace with ERC-20 USDT transfer when token contract address is known.
-    tx = {
-        "to": Web3.to_checksum_address(payment_details["wallet"]),
-        "value": w3.to_wei(0.0001, "ether"),
-        "gas": 21_000,
-        "gasPrice": w3.eth.gas_price,
-        "nonce": w3.eth.get_transaction_count(account.address),
-        "chainId": config.KITE_CHAIN_ID,
-    }
+    if config.KITE_PAYMENT_TOKEN_CONTRACT:
+        token = w3.eth.contract(
+            address=Web3.to_checksum_address(config.KITE_PAYMENT_TOKEN_CONTRACT),
+            abi=_ERC20_TRANSFER_ABI,
+        )
+        decimals = config.KITE_PAYMENT_TOKEN_DECIMALS
+        amount = int(PAYMENT_AMOUNT * (10 ** decimals))
+        tx = token.functions.transfer(recipient, amount).build_transaction(
+            {**base, "gas": 80_000, "value": 0}
+        )
+        logger.info(f"ERC-20 payment: {PAYMENT_AMOUNT} token units → {recipient}")
+    else:
+        # Native ETH fallback — used when no token contract is configured
+        tx = {**base, "to": recipient, "value": w3.to_wei(0.0001, "ether")}
+        logger.info(f"Native ETH payment: 0.0001 ETH → {recipient}")
+
     signed = account.sign_transaction(tx)
     tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
     receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
@@ -52,8 +81,9 @@ async def fetch_market_data_node(state: AgentState) -> AgentState:
 
         if resp.status_code == 402:
             payment_details = resp.json()
+            token_label = "token units" if config.KITE_PAYMENT_TOKEN_CONTRACT else "ETH (native)"
             logger.info(
-                f"402 received — paying {PAYMENT_AMOUNT_USDT} USDT "
+                f"402 received — paying {PAYMENT_AMOUNT} {token_label} "
                 f"to {payment_details['wallet']}"
             )
             tx_hash = await _pay_x402(payment_details)

@@ -19,6 +19,8 @@ SERVER_WALLET: str = os.environ["X402_DATA_SERVER_WALLET"]
 TWELVE_DATA_API_KEY: str = os.environ["TWELVE_DATA_API_KEY"]
 PAYMENT_AMOUNT_USDT: float = 0.01
 KITE_CHAIN_ID: int = int(os.getenv("KITE_CHAIN_ID", "2368"))
+# Optional: set to an ERC-20 contract address to accept token payments instead of native ETH.
+PAYMENT_TOKEN_CONTRACT: str = os.getenv("KITE_PAYMENT_TOKEN_CONTRACT", "")
 
 _w3 = Web3(Web3.HTTPProvider(KITE_RPC_URL))
 
@@ -28,13 +30,39 @@ _SYMBOL_MAP = {
     "GBPUSD": "GBP/USD",
 }
 
+# keccak256("Transfer(address,address,uint256)")
+_ERC20_TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+
+
+def _verify_erc20_payment(receipt: dict, token_contract: str, expected_to: str) -> bool:
+    """Check receipt logs for an ERC-20 Transfer to expected_to from the token contract."""
+    token_addr = token_contract.lower()
+    recipient_topic = "0x" + expected_to.lower().replace("0x", "").zfill(64)
+    for log in receipt.get("logs", []):
+        if log["address"].lower() != token_addr:
+            continue
+        topics = log.get("topics", [])
+        if len(topics) < 3:
+            continue
+        if topics[0].hex() != _ERC20_TRANSFER_TOPIC:
+            continue
+        # topics[2] is the `to` address (zero-padded to 32 bytes)
+        if topics[2].hex() == recipient_topic:
+            return True
+    return False
+
 
 def _verify_payment(tx_hash: str, expected_to: str) -> bool:
-    """Confirm that tx_hash is a confirmed transaction to expected_to on Kite testnet."""
+    """Verify payment tx — ERC-20 Transfer event if token contract is set, native ETH otherwise."""
     try:
         receipt = _w3.eth.get_transaction_receipt(tx_hash)
         if receipt is None or receipt["status"] != 1:
             return False
+
+        if PAYMENT_TOKEN_CONTRACT:
+            return _verify_erc20_payment(receipt, PAYMENT_TOKEN_CONTRACT, expected_to)
+
+        # Native ETH: tx.to must equal the server wallet
         tx = _w3.eth.get_transaction(tx_hash)
         return tx["to"].lower() == expected_to.lower()
     except Exception as e:
